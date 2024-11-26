@@ -35,6 +35,7 @@
 #include "Common/DataModel/Multiplicity.h"
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/PIDResponse.h"
+#include "Common/DataModel/PIDResponseITS.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/Core/PID/PIDTOF.h"
 #include "Common/TableProducer/PID/pidTOFBase.h"
@@ -86,6 +87,7 @@ struct NucleusCandidate {
   float TOFchi2;
   std::array<float, 5> nSigmaTPC;
   std::array<float, 5> tofMasses;
+  std::array<float, 5> nSigmaITS;
   bool fillTree;
   bool fillDCAHist;
   bool correctPV;
@@ -131,6 +133,12 @@ constexpr double betheBlochDefault[5][6]{
   {-321.34, 0.6539, 1.591, 0.8225, 2.363, 0.09},
   {-586.66, 1.859, 4.435, 0.282, 3.201, 0.09}};
 constexpr double nSigmaTPCdefault[5][2]{
+  {-5., 5.},
+  {-5., 5.},
+  {-5., 5.},
+  {-5., 5.},
+  {-5., 5.}};
+constexpr double nSigmaITSdefault[5][2]{
   {-5., 5.},
   {-5., 5.},
   {-5., 5.},
@@ -191,11 +199,14 @@ static const std::vector<std::string> binnedVariableNames{"DCAxy", "DCAz", "TPCn
 static const std::vector<std::string> chargeLabelNames{"Positive", "Negative"};
 
 float pidCuts[2][5][2];
+float pidCutsITS[5][2];
 std::shared_ptr<TH3> hNsigma[2][5][2];
+std::shared_ptr<TH3> hNsigmaITS[5][2];
 std::shared_ptr<TH3> hTOFmass[5][2];
 std::shared_ptr<TH2> hGenNuclei[5][2];
 std::shared_ptr<TH3> hMomRes[5][2];
 std::shared_ptr<TH3> hNsigmaEta[2][5][2];
+std::shared_ptr<TH3> hNsigmaITSEta[5][2];
 std::shared_ptr<TH3> hTOFmassEta[5][2];
 std::shared_ptr<TH3> hDCAxy[2][5][2];
 std::shared_ptr<TH3> hDCAz[2][5][2];
@@ -260,6 +271,7 @@ struct nucleiSpectra {
   Configurable<LabeledArray<double>> cfgMomentumScalingBetheBloch{"cfgMomentumScalingBetheBloch", {nuclei::bbMomScalingDefault[0], 5, 2, nuclei::names, nuclei::chargeLabelNames}, "TPC Bethe-Bloch momentum scaling for light nuclei"};
   Configurable<LabeledArray<double>> cfgBetheBlochParams{"cfgBetheBlochParams", {nuclei::betheBlochDefault[0], 5, 6, nuclei::names, nuclei::betheBlochParNames}, "TPC Bethe-Bloch parameterisation for light nuclei"};
   Configurable<LabeledArray<double>> cfgNsigmaTPC{"cfgNsigmaTPC", {nuclei::nSigmaTPCdefault[0], 5, 2, nuclei::names, nuclei::nSigmaConfigName}, "TPC nsigma selection for light nuclei"};
+  Configurable<LabeledArray<double>> cfgNsigmaITS{"cfgNsigmaITS", {nuclei::nSigmaITSdefault[0], 5, 2, nuclei::names, nuclei::nSigmaConfigName}, "ITS nsigma selection for light nuclei"};
   Configurable<LabeledArray<double>> cfgDCAcut{"cfgDCAcut", {nuclei::DCAcutDefault[0], 5, 2, nuclei::names, nuclei::nDCAConfigName}, "Max DCAxy and DCAz for light nuclei"};
   Configurable<LabeledArray<double>> cfgDownscaling{"cfgDownscaling", {nuclei::DownscalingDefault[0], 5, 1, nuclei::names, nuclei::DownscalingConfigName}, "Fraction of kept candidates for light nuclei"};
   Configurable<LabeledArray<int>> cfgTreeConfig{"cfgTreeConfig", {nuclei::TreeConfigDefault[0], 5, 2, nuclei::names, nuclei::treeConfigNames}, "Filtered trees configuration"};
@@ -284,6 +296,7 @@ struct nucleiSpectra {
   ConfigurableAxis cfgMomResBins{"cfgMomResBins", {200, -1., 1.}, "Momentum resolution binning"};
   ConfigurableAxis cfgNsigmaTPCbins{"cfgNsigmaTPCbins", {100, -5., 5.}, "nsigma_TPC binning"};
   ConfigurableAxis cfgNsigmaTOFbins{"cfgNsigmaTOFbins", {100, -5., 5.}, "nsigma_TOF binning"};
+  ConfigurableAxis cfgNsigmaITSbins{"cfgNsigmaITSbins", {100, -5., 5.}, "nsigma_ITS binning"};
   ConfigurableAxis cfgTOFmassBins{"cfgTOFmassBins", {200, -5., 5.}, "TOF mass binning"};
   ConfigurableAxis cfgV2Bins{"cfgV2Bins", {100, -1.f, 1.f}, "Binning for v2"};
   ConfigurableAxis cfgNITSClusBins{"cfgNITSClusBins", {3, 4.5, 7.5}, "N ITS clusters binning"};
@@ -391,7 +404,7 @@ struct nucleiSpectra {
     ccdb->setFatalWhenNull(false);
 
     const AxisSpec centAxis{cfgCentralityBins, fmt::format("{} percentile", (std::string)nuclei::centDetectorNames[cfgCentralityEstimator])};
-    const AxisSpec nSigmaAxes[2]{{cfgNsigmaTPCbins, "n#sigma_{TPC}"}, {cfgNsigmaTOFbins, "n#sigma_{TOF}"}};
+    const AxisSpec nSigmaAxes[3]{{cfgNsigmaTPCbins, "n#sigma_{TPC}"}, {cfgNsigmaTOFbins, "n#sigma_{TOF}"}, {cfgNsigmaITSbins, "n#sigma_{}"}};
     const AxisSpec tofMassAxis{cfgTOFmassBins, "TOF mass - PDG mass"};
     const AxisSpec ptResAxis{cfgMomResBins, "#Delta#it{p}_{T}/#it{p}_{T}"};
     const AxisSpec v2Axis{cfgV2Bins, "cos(2(#phi - #Psi_{2}))"};
@@ -437,6 +450,9 @@ struct nucleiSpectra {
         nuclei::hNsigma[0][iS][iC] = spectra.add<TH3>(fmt::format("h{}nsigma{}_{}", nuclei::pidName[0], nuclei::matter[iC], nuclei::names[iS]).data(), fmt::format("n#sigma_{{}} {} {}", nuclei::pidName[0], nuclei::matter[iC], nuclei::names[iS]).data(), HistType::kTH3D, {centAxis, ptAxes[iS], nSigmaAxes[0]});
         nuclei::hNsigmaEta[0][iS][iC] = spectra.add<TH3>(fmt::format("h{}nsigmaEta{}_{}", nuclei::pidName[0], nuclei::matter[iC], nuclei::names[iS]).data(), fmt::format("n#sigma_{{}} {} {} vs #eta", nuclei::pidName[0], nuclei::matter[iC], nuclei::names[iS]).data(), HistType::kTH3D, {etaAxis, ptAxes[iS], nSigmaAxes[0]});
 
+        nuclei::hNsigmaITS[iS][iC] = spectra.add<TH3>(fmt::format("hITSnsigma{}_{}", nuclei::matter[iC], nuclei::names[iS]).data(), fmt::format("n#sigma_{ITS} {} {}", nuclei::matter[iC], nuclei::names[iS]).data(), HistType::kTH3D, {centAxis, ptAxes[iS], nSigmaAxes[3]});
+        nuclei::hNsigmaITSEta[iS][iC] = spectra.add<TH3>(fmt::format("hITSnsigmaEta{}_{}", nuclei::matter[iC], nuclei::names[iS]).data(), fmt::format("n#sigma_{ITS} {} {} vs #eta", nuclei::matter[iC], nuclei::names[iS]).data(), HistType::kTH3D, {etaAxis, ptAxes[iS], nSigmaAxes[3]});
+
         for (int iPID{0}; iPID < 2; ++iPID) {
           nuclei::hDCAxy[iPID][iS][iC] = spectra.add<TH3>(fmt::format("hDCAxy{}_{}_{}", nuclei::pidName[iPID], nuclei::matter[iC], nuclei::names[iS]).data(), fmt::format("DCAxy {} {} {}", nuclei::pidName[iPID], nuclei::matter[iC], nuclei::names[iS]).data(), HistType::kTH3D, {centAxis, ptAxes[iS], dcaxyAxes[iS]});
           nuclei::hDCAz[iPID][iS][iC] = spectra.add<TH3>(fmt::format("hDCAz{}_{}_{}", nuclei::pidName[iPID], nuclei::matter[iC], nuclei::names[iS]).data(), fmt::format("DCAz {} {} {}", nuclei::pidName[iPID], nuclei::matter[iC], nuclei::names[iS]).data(), HistType::kTH3D, {centAxis, ptAxes[iS], dcazAxes[iS]});
@@ -462,6 +478,7 @@ struct nucleiSpectra {
     for (int iS{0}; iS < nuclei::species; ++iS) {
       for (int iMax{0}; iMax < 2; ++iMax) {
         nuclei::pidCuts[0][iS][iMax] = cfgNsigmaTPC->get(iS, iMax);
+        nuclei::pidCutsITS[iS][iMax] = cfgNsigmaITS->get(iS, iMax);
       }
     }
 
@@ -498,6 +515,7 @@ struct nucleiSpectra {
   void fillDataInfo(Tcoll const& collision, Ttrks const& tracks)
   {
     o2::pid::tof::Beta<typename Ttrks ::iterator> responseBeta;
+    o2::aod::ITSResponse responseITS;
     auto bc = collision.template bc_as<aod::BCsWithTimestamps>();
     initCCDB(bc);
     if (cfgSkimmedProcessing) {
@@ -548,14 +566,24 @@ struct nucleiSpectra {
         nTOFTracks[iC]++;
       }
 
-      bool selectedTPC[5]{false}, goodToAnalyse{false};
+      bool selectedTPC[5]{false}, goodToAnalyse{false}, selectedITS[5]{false};
       std::array<float, 5> nSigmaTPC;
+
+      std::array<float, 5> nSigmaITS = {-10., -10., -10., -10., -10.};
+      // Filling nSigma for ITS
+      nSigmaITS[0] = responseITS.nSigmaITS<o2::track::PID::Proton>(track.itsClusterSizes(), track.p(), track.eta());
+      nSigmaITS[1] = responseITS.nSigmaITS<o2::track::PID::Deuteron>(track.itsClusterSizes(), track.p(), track.eta());
+      nSigmaITS[2] = responseITS.nSigmaITS<o2::track::PID::Triton>(track.itsClusterSizes(), track.p(), track.eta());
+      nSigmaITS[3] = responseITS.nSigmaITS<o2::track::PID::Helium3>(track.itsClusterSizes(), track.p(), track.eta());
+      nSigmaITS[4] = responseITS.nSigmaITS<o2::track::PID::Alpha>(track.itsClusterSizes(), track.p(), track.eta());
+
       for (int iS{0}; iS < nuclei::species; ++iS) {
         double expBethe{tpc::BetheBlochAleph(static_cast<double>(correctedTpcInnerParam * bgScalings[iS][iC]), cfgBetheBlochParams->get(iS, 0u), cfgBetheBlochParams->get(iS, 1u), cfgBetheBlochParams->get(iS, 2u), cfgBetheBlochParams->get(iS, 3u), cfgBetheBlochParams->get(iS, 4u))};
         double expSigma{expBethe * cfgBetheBlochParams->get(iS, 5u)};
         nSigma[0][iS] = static_cast<float>((track.tpcSignal() - expBethe) / expSigma);
         nSigmaTPC[iS] = nSigma[0][iS];
         selectedTPC[iS] = (nSigma[0][iS] > nuclei::pidCuts[0][iS][0] && nSigma[0][iS] < nuclei::pidCuts[0][iS][1]);
+        selectedITS[iS] = (nSigmaITS[iS] > nuclei::pidCutsITS[iS][0] && nSigma[0][iS] < nuclei::pidCutsITS[iS][1]);
         goodToAnalyse = goodToAnalyse || selectedTPC[iS];
         if (selectedTPC[iS] && track.p() > 0.2) {
           nuclei::hDeltaP[iC][iS]->Fill(track.p(), 1 - correctedTpcInnerParam / track.p());
@@ -631,6 +659,8 @@ struct nucleiSpectra {
                 if (!iPID) { /// temporary exclusion of the TOF nsigma PID for the He3 and Alpha
                   nuclei::hNsigma[iPID][iS][iC]->Fill(centrality, fvector.pt(), nSigma[iPID][iS]);
                   nuclei::hNsigmaEta[iPID][iS][iC]->Fill(fvector.eta(), fvector.pt(), nSigma[iPID][iS]);
+                  nuclei::hNsigmaITS[iS][iC]->Fill(centrality, fvector.pt(), nSigmaITS[iS]);
+                  nuclei::hNsigmaITSEta[iS][iC]->Fill(fvector.eta(), fvector.pt(), nSigmaITS[iS]);
                 }
                 if (iPID) {
                   nuclei::hTOFmass[iS][iC]->Fill(centrality, fvector.pt(), tofMasses[iS]);
@@ -706,7 +736,7 @@ struct nucleiSpectra {
         nuclei::candidates.emplace_back(NucleusCandidate{
           static_cast<int>(track.globalIndex()), static_cast<int>(track.collisionId()), (1 - 2 * iC) * mTrackParCov.getPt(), mTrackParCov.getEta(), mTrackParCov.getPhi(),
           correctedTpcInnerParam, beta, collision.posZ(), dcaInfo[0], dcaInfo[1], track.tpcSignal(), track.itsChi2NCl(), track.tpcChi2NCl(), track.tofChi2(),
-          nSigmaTPC, tofMasses, fillTree, fillDCAHist, correctPV, isSecondary, fromWeakDecay, flag, track.tpcNClsFindable(), static_cast<uint8_t>(track.tpcNClsCrossedRows()), track.itsClusterMap(),
+          nSigmaTPC, tofMasses, nSigmaITS, fillTree, fillDCAHist, correctPV, isSecondary, fromWeakDecay, flag, track.tpcNClsFindable(), static_cast<uint8_t>(track.tpcNClsCrossedRows()), track.itsClusterMap(),
           static_cast<uint8_t>(track.tpcNClsFound()), static_cast<uint8_t>(track.tpcNClsShared()), static_cast<uint8_t>(track.itsNCls()), static_cast<uint32_t>(track.itsClusterSizes())});
       }
     } // end loop over tracks
