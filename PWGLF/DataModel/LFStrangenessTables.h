@@ -39,6 +39,11 @@ DECLARE_SOA_TABLE(StraOrigins, "AOD", "STRAORIGIN", //! Table which contains the
 
 namespace stracollision
 {
+
+// Needed for compatibility between central framework and LF framework
+DECLARE_SOA_COLUMN(QTPCL, qTPCL, float);
+DECLARE_SOA_COLUMN(QTPCR, qTPCR, float);
+
 DECLARE_SOA_DYNAMIC_COLUMN(IsUPC, isUPC, //! check whether this is a UPC or hadronic collision
                            [](int value) -> bool { return value <= 2 ? true : false; });
 DECLARE_SOA_DYNAMIC_COLUMN(TotalFV0AmplitudeA, totalFV0AmplitudeA, //! get the total sum of the FV0 A amplitudes
@@ -225,8 +230,8 @@ DECLARE_SOA_TABLE(StraFT0MQVs, "AOD", "STRAFT0MQVS", //! t0m Qvec
 DECLARE_SOA_TABLE(StraFV0AQVs, "AOD", "STRAFV0AQVS", //! v0a Qvec
                   qvec::QvecFV0ARe, qvec::QvecFV0AIm, qvec::SumAmplFV0A);
 DECLARE_SOA_TABLE(StraTPCQVs, "AOD", "STRATPCQVS", //! tpc Qvec
-                  qvec::QvecBNegRe, qvec::QvecBNegIm, epcalibrationtable::QTPCL,
-                  qvec::QvecBPosRe, qvec::QvecBPosIm, epcalibrationtable::QTPCR);
+                  qvec::QvecBNegRe, qvec::QvecBNegIm, stracollision::QTPCL,
+                  qvec::QvecBPosRe, qvec::QvecBPosIm, stracollision::QTPCR);
 DECLARE_SOA_TABLE(StraFT0CQVsEv, "AOD", "STRAFT0CQVSEv", //! events used to compute t0c Qvec
                   epcalibrationtable::TriggerEventEP);
 DECLARE_SOA_TABLE(StraZDCSP, "AOD", "STRAZDCSP", //! events used to compute the ZDC spectator plane

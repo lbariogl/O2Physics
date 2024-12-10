@@ -802,7 +802,7 @@ struct strangederivedbuilder {
   }
   void processFT0CQVectorsLF(soa::Join<aod::Collisions, aod::EPCalibrationTables>::iterator const& collision)
   {
-    StraFT0CQVs(collision.qFT0C() * std::cos(2 * collision.psiFT0C()), collision.qFT0C() * std::sin(2 * collision.psiFT0C()), collision.qFT0C());
+    StraFT0CQVs(collision.qFT0Cx(), collision.qFT0Cy(), collision.qFT0C());
     StraFT0CQVsEv(collision.triggereventep());
   }
   void processZDCSP(soa::Join<aod::Collisions, aod::SPCalibrationTables>::iterator const& collision)
@@ -823,7 +823,7 @@ struct strangederivedbuilder {
   }
   void processTPCQVectorsLF(soa::Join<aod::Collisions, aod::EPCalibrationTables>::iterator const& collision)
   {
-    StraTPCQVs(collision.qTPCL() * std::cos(2 * collision.psiTPCL()), collision.qTPCL() * std::sin(2 * collision.psiTPCL()), collision.qTPCL(), collision.qTPCR() * std::cos(2 * collision.psiTPCR()), collision.qTPCR() * std::sin(2 * collision.psiTPCR()), collision.qTPCR());
+    StraTPCQVs(collision.qTPCLx(), collision.qTPCLy(), collision.qTPCL(), collision.qTPCRx(), collision.qTPCRy(), collision.qTPCR());
   }
 
   uint64_t combineProngIndices(uint32_t low, uint32_t high)

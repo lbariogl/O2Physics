@@ -515,7 +515,7 @@ struct highmasslambdasvx {
   ConfigurableAxis axisMultiplicityClass{"axisMultiplicityClass", {10, 0, 100}, "multiplicity percentile for bin"};
   ConfigurableAxis axisEPAngle{"axisEPAngle", {1, -TMath::Pi() / 2, TMath::Pi() / 2}, "event plane angle"};
 
-  using BinningTypeVertexContributor = ColumnBinningPolicy<aod::collision::PosZ, aod::cent::CentFT0C, aod::epcalibrationtable::PsiFT0C>;
+  using BinningTypeVertexContributor = ColumnBinningPolicy<aod::collision::PosZ, aod::cent::CentFT0C, aod::epcalibrationtable::PsiFT0C<aod::epcalibrationtable::QFT0Cx, aod::epcalibrationtable::QFT0Cy>>;
   ROOT::Math::PxPyPzMVector Lambdac, Proton, Kshort, LambdacRot, KshortRot;
   // ROOT::Math::PxPyPzMVector fourVecDauCM;
   // ROOT::Math::XYZVector threeVecDauCM, threeVecDauCMXY, eventplaneVec, eventplaneVecNorm, beamvector;

@@ -476,7 +476,7 @@ struct epvector {
       }
       lastRunNumber = currentRunNumber;
     }
-    epcalibrationtable(triggerevent, centrality, psiFT0C, psiFT0A, psiTPC, psiTPCL, psiTPCR, TMath::Sqrt(qxFT0C * qxFT0C + qyFT0C * qyFT0C), TMath::Sqrt(qxFT0A * qxFT0A + qyFT0A * qyFT0A), TMath::Sqrt(qxTPC * qxTPC + qyTPC * qyTPC), TMath::Sqrt(qxTPCL * qxTPCL + qyTPCL * qyTPCL), TMath::Sqrt(qxTPCR * qxTPCR + qyTPCR * qyTPCR));
+    epcalibrationtable(triggerevent, centrality, qxFT0C, qyFT0C, qxFT0A, qyFT0A, qxTPC, qyTPC, qxTPCL, qyTPCL, qxTPCR, qyTPCR);
   }
 };
 

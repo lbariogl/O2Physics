@@ -388,7 +388,7 @@ struct kstarpbpb {
   ConfigurableAxis axisMultiplicityClass{"axisMultiplicityClass", {20, 0, 100}, "multiplicity percentile for bin"};
   ConfigurableAxis axisEPAngle{"axisEPAngle", {9, -TMath::Pi() / 2, TMath::Pi() / 2}, "event plane angle"};
 
-  using BinningTypeVertexContributor = ColumnBinningPolicy<aod::collision::PosZ, aod::cent::CentFT0C, aod::epcalibrationtable::PsiFT0C>;
+  using BinningTypeVertexContributor = ColumnBinningPolicy<aod::collision::PosZ, aod::cent::CentFT0C, aod::epcalibrationtable::PsiFT0C<aod::epcalibrationtable::QFT0Cx, aod::epcalibrationtable::QFT0Cy>>;
   ROOT::Math::PxPyPzMVector KstarMother, daughter1, daughter2, kaonrot, kstarrot;
 
   void processSE(EventCandidates::iterator const& collision, TrackCandidates const& tracks, aod::BCs const&)
