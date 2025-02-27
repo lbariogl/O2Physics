@@ -105,6 +105,6 @@ o2physics_add_dpl_workflow(reduced3body-creator
     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(nuclei-flow-trees
-    SOURCES nucleiFlowTrees.cxx
+    SOURCES nucleiFlowTree.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::DetectorsBase O2Physics::EventFilteringUtils
     COMPONENT_NAME Analysis)
