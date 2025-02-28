@@ -384,18 +384,12 @@ struct nucleiFlowTree {
         }
         ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>> fvector{mTrackParCov.getPt() * nuclei::charges[iS], mTrackParCov.getEta(), mTrackParCov.getPhi(), nuclei::masses[iS]};
         float y{fvector.Rapidity() + cfgCMrapidity};
-        for (int iPID{0}; iPID < 2; ++iPID) { /// 0 TPC, 1 TOF
-          if (selectedTPC[iS]) {
-            if (iPID && !track.hasTOF()) {
-              continue;
-            } else if (iPID) {
-              selectedTOF = true; /// temporarly skipped
-              float charge{1.f + static_cast<float>(iS == 3 || iS == 4)};
-              tofMasses[iS] = correctedTpcInnerParam * charge * std::sqrt(1.f / (beta * beta) - 1.f) - nuclei::masses[iS];
-            }
-          }
-        }
         if (selectedTPC[iS]) {
+          if (track.hasTOF()) {
+            selectedTOF = true; /// temporarly skipped
+            float charge{1.f + static_cast<float>(iS == 3 || iS == 4)};
+            tofMasses[iS] = correctedTpcInnerParam * charge * std::sqrt(1.f / (beta * beta) - 1.f) - nuclei::masses[iS];
+          }
           if (cfgTreeConfig->get(iS, 1u) && !selectedTOF) {
             continue;
           }
@@ -448,7 +442,7 @@ struct nucleiFlowTree {
             static_cast<float>(collision.nTrkBNeg()),
             static_cast<float>(collision.nTrkBPos())});
         }
-        if (flag & BIT(2)) {
+        if (flag & kTriton) {
           if (track.pt() < cfgCutPtMinTree || track.pt() > cfgCutPtMaxTree || track.sign() > 0)
           continue;
         }
