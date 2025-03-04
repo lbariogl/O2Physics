@@ -120,8 +120,8 @@ struct nucleiFlowTree {
   Configurable<LabeledArray<double>> cfgDCAcut{"cfgDCAcut", {nuclei::DCAcutDefault[0], 5, 2, nuclei::names, nuclei::nDCAConfigName}, "Max DCAxy and DCAz for light nuclei"};
   Configurable<LabeledArray<double>> cfgDownscaling{"cfgDownscaling", {nuclei::DownscalingDefault[0], 5, 1, nuclei::names, nuclei::DownscalingConfigName}, "Fraction of kept candidates for light nuclei"};
   Configurable<LabeledArray<int>> cfgTreeConfig{"cfgTreeConfig", {nuclei::TreeConfigDefault[0], 5, 2, nuclei::names, nuclei::treeConfigNames}, "Filtered trees configuration"};
-  Configurable<LabeledArray<int>> cfgDCAHists{"cfgDCAHists", {nuclei::DCAHistDefault[0], 5, 2, nuclei::names, nuclei::DCAConfigNames}, "DCA hist configuration"}; //TODO: levare tutte le ricorrenzeå
-  Configurable<LabeledArray<int>> cfgFlowHist{"cfgFlowHist", {nuclei::FlowHistDefault[0], 5, 1, nuclei::names, nuclei::flowConfigNames}, "Flow hist configuration"}; //TODO: levare tutte le ricorrenzeå
+  Configurable<LabeledArray<int>> cfgDCAHists{"cfgDCAHists", {nuclei::DCAHistDefault[0], 5, 2, nuclei::names, nuclei::DCAConfigNames}, "DCA hist configuration"};    // TODO: levare tutte le ricorrenzeå
+  Configurable<LabeledArray<int>> cfgFlowHist{"cfgFlowHist", {nuclei::FlowHistDefault[0], 5, 1, nuclei::names, nuclei::flowConfigNames}, "Flow hist configuration"}; // TODO: levare tutte le ricorrenzeå
 
   ConfigurableAxis cfgNITSClusBins{"cfgNITSClusBins", {3, 4.5, 7.5}, "N ITS clusters binning"};
   ConfigurableAxis cfgNTPCClusBins{"cfgNTPCClusBins", {3, 89.5, 159.5}, "N TPC clusters binning"};
@@ -259,7 +259,7 @@ struct nucleiFlowTree {
 
     for (int iS{0}; iS < nuclei::species; ++iS) {
       for (int iMax{0}; iMax < 2; ++iMax) {
-        nuclei::pidCutTPC[iS][iMax] = cfgNsigmaTPC->get(iS, iMax);  //changed pidCut to pidCutTPC so that it compiles TODO: check if it is correct
+        nuclei::pidCutTPC[iS][iMax] = cfgNsigmaTPC->get(iS, iMax); // changed pidCut to pidCutTPC so that it compiles TODO: check if it is correct
       }
     }
 
@@ -362,7 +362,7 @@ struct nucleiFlowTree {
       beta = std::min(1.f - 1.e-6f, std::max(1.e-4f, beta)); /// sometimes beta > 1 or < 0, to be checked
       uint16_t flag = static_cast<uint16_t>((track.pidForTracking() & 0xF) << 12);
       std::array<float, 5> tofMasses{-3.f, -3.f, -3.f, -3.f, -3.f};
-      bool fillTree{true};  //set to true and never used again
+      bool fillTree{true}; // set to true and never used again
       bool fillDCAHist{false};
       bool correctPV{false};
       bool isSecondary{false};
@@ -444,7 +444,7 @@ struct nucleiFlowTree {
         }
         if (flag & kTriton) {
           if (track.pt() < cfgCutPtMinTree || track.pt() > cfgCutPtMaxTree || track.sign() > 0)
-          continue;
+            continue;
         }
         nuclei::candidates.emplace_back(NucleusCandidate{
           static_cast<int>(track.globalIndex()), static_cast<int>(track.collisionId()), (1 - 2 * iC) * mTrackParCov.getPt(), mTrackParCov.getEta(), mTrackParCov.getPhi(),
@@ -481,7 +481,7 @@ struct nucleiFlowTree {
     }
     fillDataInfo(collision, tracks);
     for (auto& c : nuclei::candidates) {
-        nucleiTable(c.pt, c.eta, c.phi, c.tpcInnerParam, c.beta, c.zVertex, c.DCAxy, c.DCAz, c.TPCsignal, c.ITSchi2, c.TPCchi2, c.TOFchi2, c.flags, c.TPCfindableCls, c.TPCcrossedRows, c.ITSclsMap, c.TPCnCls, c.TPCnClsShared, c.clusterSizesITS);
+      nucleiTable(c.pt, c.eta, c.phi, c.tpcInnerParam, c.beta, c.zVertex, c.DCAxy, c.DCAz, c.TPCsignal, c.ITSchi2, c.TPCchi2, c.TOFchi2, c.flags, c.TPCfindableCls, c.TPCcrossedRows, c.ITSclsMap, c.TPCnCls, c.TPCnClsShared, c.clusterSizesITS);
     }
     for (auto& c : nuclei::candidates_flow) {
       nucleiTableFlow(c.centFV0A, c.centFT0M, c.centFT0A, c.centFT0C, c.psiFT0A, c.psiFT0C, c.psiTPC, c.psiTPCl, c.psiTPCr, c.qFT0A, c.qFT0C, c.qTPC, c.qTPCl, c.qTPCr);
@@ -493,5 +493,5 @@ struct nucleiFlowTree {
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<nucleiFlowTree>(cfgc, TaskName{"nuclei-flow-trees"})};
+    adaptAnalysisTask<nucleiFlowTree>(cfgc, TaskName{"nuclei-flow-tree"})};
 }
