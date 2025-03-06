@@ -95,7 +95,6 @@ struct nucleiFlowTree {
   Service<o2::ccdb::BasicCCDBManager> ccdb;
   Zorro zorro;
   OutputObj<ZorroSummary> zorroSummary{"zorroSummary"};
-  TrackTuner trackTunerObj;
 
   Configurable<bool> cfgCompensatePIDinTracking{"cfgCompensatePIDinTracking", false, "If true, divide tpcInnerParam by the electric charge"};
 
@@ -120,19 +119,12 @@ struct nucleiFlowTree {
   Configurable<LabeledArray<double>> cfgDCAcut{"cfgDCAcut", {nuclei::DCAcutDefault[0], 5, 2, nuclei::names, nuclei::nDCAConfigName}, "Max DCAxy and DCAz for light nuclei"};
   Configurable<LabeledArray<double>> cfgDownscaling{"cfgDownscaling", {nuclei::DownscalingDefault[0], 5, 1, nuclei::names, nuclei::DownscalingConfigName}, "Fraction of kept candidates for light nuclei"};
   Configurable<LabeledArray<int>> cfgTreeConfig{"cfgTreeConfig", {nuclei::TreeConfigDefault[0], 5, 2, nuclei::names, nuclei::treeConfigNames}, "Filtered trees configuration"};
-  Configurable<LabeledArray<int>> cfgDCAHists{"cfgDCAHists", {nuclei::DCAHistDefault[0], 5, 2, nuclei::names, nuclei::DCAConfigNames}, "DCA hist configuration"};    // TODO: levare tutte le ricorrenzeå
-  Configurable<LabeledArray<int>> cfgFlowHist{"cfgFlowHist", {nuclei::FlowHistDefault[0], 5, 1, nuclei::names, nuclei::flowConfigNames}, "Flow hist configuration"}; // TODO: levare tutte le ricorrenzeå
 
   ConfigurableAxis cfgNITSClusBins{"cfgNITSClusBins", {3, 4.5, 7.5}, "N ITS clusters binning"};
   ConfigurableAxis cfgNTPCClusBins{"cfgNTPCClusBins", {3, 89.5, 159.5}, "N TPC clusters binning"};
 
   Configurable<bool> cfgSkimmedProcessing{"cfgSkimmedProcessing", false, "Skimmed dataset processing"};
 
-  // configurables for track tuner
-  Configurable<bool> cfgUseTrackTuner{"cfgUseTrackTuner", false, "Apply track tuner corrections to MC tracks"};
-  Configurable<std::string> cfgTrackTunerParams{"cfgTrackTunerParams", "debugInfo=0|updateTrackDCAs=1|updateTrackCovMat=1|updateCurvature=0|updateCurvatureIU=0|updatePulls=1|isInputFileFromCCDB=1|pathInputFile=Users/m/mfaggin/test/inputsTrackTuner/pp2023/smoothHighPtMC|nameInputFile=trackTuner_DataLHC23fPass1_McLHC23k4b_run535085.root|pathFileQoverPt=Users/h/hsharma/qOverPtGraphs|nameFileQoverPt=D0sigma_Data_removal_itstps_MC_LHC22b1b.root|usePvRefitCorrections=0|qOverPtMC=-1.|qOverPtData=-1.", "TrackTuner parameter initialization (format: <name>=<value>|<name>=<value>)"};
-  // running variables for track tuner
-  o2::dataformats::DCA mDcaInfoCov;
   o2::track::TrackParametrizationWithError<float> mTrackParCov;
   o2::base::Propagator::MatCorrType matCorr = o2::base::Propagator::MatCorrType::USEMatCorrLUT;
 
@@ -210,6 +202,9 @@ struct nucleiFlowTree {
       spectra.fill(HIST("hEventSelections"), nuclei::evSel::kIsEPtriggered + 1);
     }
 
+    float centrality = getCentrality(collision);
+    spectra.fill(HIST("hCentrality"), centrality);
+
     return true;
   }
 
@@ -241,7 +236,7 @@ struct nucleiFlowTree {
     ccdb->setLocalObjectValidityChecking();
     ccdb->setFatalWhenNull(false);
 
-    spectra.add("hEventSelections", "hEventSelections", {HistType::kTH1I, {{nuclei::evSel::kNevSels + 1, -0.5f, float(nuclei::evSel::kNevSels) + 0.5f}}});
+    spectra.add("hEventSelections", "hEventSelections", {HistType::kTH1D, {{nuclei::evSel::kNevSels + 1, -0.5f, float(nuclei::evSel::kNevSels) + 0.5f}}});
     spectra.get<TH1>(HIST("hEventSelections"))->GetXaxis()->SetBinLabel(1, "all");
     spectra.get<TH1>(HIST("hEventSelections"))->GetXaxis()->SetBinLabel(nuclei::evSel::kTVX + 2, "TVX");
     spectra.get<TH1>(HIST("hEventSelections"))->GetXaxis()->SetBinLabel(nuclei::evSel::kZvtx + 2, "Zvtx");
@@ -252,7 +247,9 @@ struct nucleiFlowTree {
     spectra.get<TH1>(HIST("hEventSelections"))->GetXaxis()->SetBinLabel(nuclei::evSel::kIsGoodITSLayersAll + 2, "IsGoodITSLayersAll");
     spectra.get<TH1>(HIST("hEventSelections"))->GetXaxis()->SetBinLabel(nuclei::evSel::kIsEPtriggered + 2, "IsEPtriggered");
 
-    spectra.add("hRecVtxZData", "collision z position", HistType::kTH1F, {{200, -20., +20., "z position (cm)"}});
+    spectra.add("hCentrality", "hCentrality", {HistType::kTH1D, {100, 0., 1''0., "Centrality (%)"}});
+
+    spectra.add("hRecVtxZData", "collision z position", HistType::kTH1F, {{200, -20., 20., "z position (cm)"}});
     spectra.add("hTpcSignalData", "Specific energy loss", HistType::kTH2F, {{600, -6., 6., "#it{p} (GeV/#it{c})"}, {1400, 0, 1400, "d#it{E} / d#it{X} (a. u.)"}});
     spectra.add("hTpcSignalDataSelected", "Specific energy loss for selected particles", HistType::kTH2F, {{600, -6., 6., "#it{p} (GeV/#it{c})"}, {1400, 0, 1400, "d#it{E} / d#it{X} (a. u.)"}});
     spectra.add("hTofSignalData", "TOF beta", HistType::kTH2F, {{500, 0., 5., "#it{p} (GeV/#it{c})"}, {750, 0, 1.5, "TOF #beta"}});
@@ -300,8 +297,6 @@ struct nucleiFlowTree {
 
     const o2::math_utils::Point3D<float> collVtx{collision.posX(), collision.posY(), collision.posZ()};
 
-    float centrality = getCentrality(collision);
-
     const double bgScalings[5][2]{
       {nuclei::charges[0] * cfgMomentumScalingBetheBloch->get(0u, 0u) / nuclei::masses[0], nuclei::charges[0] * cfgMomentumScalingBetheBloch->get(0u, 1u) / nuclei::masses[0]},
       {nuclei::charges[1] * cfgMomentumScalingBetheBloch->get(1u, 0u) / nuclei::masses[1], nuclei::charges[1] * cfgMomentumScalingBetheBloch->get(1u, 1u) / nuclei::masses[1]},
@@ -325,9 +320,6 @@ struct nucleiFlowTree {
       float correctedTpcInnerParam = (heliumPID && cfgCompensatePIDinTracking) ? track.tpcInnerParam() / 2 : track.tpcInnerParam();
 
       spectra.fill(HIST("hTpcSignalData"), correctedTpcInnerParam * track.sign(), track.tpcSignal());
-      float nSigma[2][5]{
-        {-10., -10., -10., -10., -10.},
-        {0.f, 0.f, 0.f, 0.f, 0.f}}; /// then we will calibrate the TOF mass for the He3 and Alpha
       const int iC{track.sign() < 0};
 
       bool selectedTPC[5]{false}, goodToAnalyse{false};
@@ -349,7 +341,6 @@ struct nucleiFlowTree {
         continue;
       }
 
-      mDcaInfoCov.set(999, 999, 999, 999, 999);
       setTrackParCov(track, mTrackParCov);
       mTrackParCov.setPID(track.pidForTracking());
 
@@ -383,7 +374,6 @@ struct nucleiFlowTree {
           continue;
         }
         ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>> fvector{mTrackParCov.getPt() * nuclei::charges[iS], mTrackParCov.getEta(), mTrackParCov.getPhi(), nuclei::masses[iS]};
-        float y{fvector.Rapidity() + cfgCMrapidity};
         if (selectedTPC[iS]) {
           if (track.hasTOF()) {
             selectedTOF = true; /// temporarly skipped
@@ -393,8 +383,7 @@ struct nucleiFlowTree {
           if (cfgTreeConfig->get(iS, 1u) && !selectedTOF) {
             continue;
           }
-          // !fillDCAHist && cfgDCAHists->get(iS, iC) ? fillDCAHist = true : fillDCAHist;
-          bool setPartFlag = cfgTreeConfig->get(iS, 0u) || cfgDCAHists->get(iS, iC);
+          bool setPartFlag = cfgTreeConfig->get(iS, 0u);
           if (setPartFlag) {
             if (cfgDownscaling->get(iS) < 1. && gRandom->Rndm() > cfgDownscaling->get(iS)) {
               continue;
@@ -470,7 +459,7 @@ struct nucleiFlowTree {
       nucleiTableFlow(c.centFV0A, c.centFT0M, c.centFT0A, c.centFT0C, c.psiFT0A, c.psiFT0C, c.psiTPC, c.psiTPCl, c.psiTPCr, c.qFT0A, c.qFT0C, c.qTPC, c.qTPCl, c.qTPCr);
     }
   }
-  PROCESS_SWITCH(nucleiFlowTree, processDataFlow, "Data analysis with flow", false);
+  PROCESS_SWITCH(nucleiFlowTree, processDataFlow, "Data analysis with flow", true);
 
   void processDataFlowAlternative(CollWithQvec const& collision, TrackCandidates const& tracks, aod::BCsWithTimestamps const&)
   {
