@@ -59,6 +59,8 @@ struct ResonanceInitializer {
 
   Produces<aod::ResoCollisions> resoCollisions;
   Produces<aod::ResoMCCollisions> resoMCCollisions;
+  Produces<aod::ResoSpheroCollisions> resoSpheroCollisions;
+  Produces<aod::ResoEvtPlCollisions> resoEvtPlCollisions;
   Produces<aod::ResoTracks> reso2trks;
   Produces<aod::ResoV0s> reso2v0s;
   Produces<aod::ResoCascades> reso2cascades;
@@ -220,7 +222,7 @@ struct ResonanceInitializer {
                                                     || (nabs(aod::mcparticle::pdgCode) == 123314)  // Xi(1820)0
                                                     || (nabs(aod::mcparticle::pdgCode) == 123324); // Xi(1820)-0
 
-  using ResoEvents = soa::Join<aod::Collisions, aod::EvSels, aod::CentFV0As, aod::CentFT0Ms, aod::CentFT0Cs, aod::CentFT0As, aod::Mults>;
+  using ResoEvents = soa::Join<aod::Collisions, aod::EvSels, aod::CentFT0Ms, aod::CentFT0Cs, aod::CentFT0As, aod::Mults>;
   using ResoRun2Events = soa::Join<aod::Collisions, aod::EvSels, aod::CentRun2V0Ms>;
   using ResoEventsMC = soa::Join<ResoEvents, aod::McCollisionLabels>;
   using ResoRun2EventsMC = soa::Join<ResoEvents, aod::McCollisionLabels>;
@@ -510,9 +512,6 @@ struct ResonanceInitializer {
       case 2:
         returnValue = ResoEvents.centFT0A();
         break;
-      case 99:
-        returnValue = ResoEvents.centFV0A();
-        break;
       default:
         returnValue = ResoEvents.centFT0M();
         break;
@@ -602,33 +601,32 @@ struct ResonanceInitializer {
         continue;
       if (!filterTrack(track))
         continue;
+      uint8_t trackFlags = (track.passedITSRefit() << 0) |
+                           (track.passedTPCRefit() << 1) |
+                           (track.isGlobalTrackWoDCA() << 2) |
+                           (track.isGlobalTrack() << 3) |
+                           (track.isPrimaryTrack() << 4) |
+                           (track.isPVContributor() << 5) |
+                           (track.hasTOF() << 6) |
+                           ((track.sign() > 0) << 7); // sign +1: 1, -1: 0
       reso2trks(resoCollisions.lastIndex(),
                 track.globalIndex(),
                 track.pt(),
                 track.px(),
                 track.py(),
                 track.pz(),
-                track.eta(),
-                track.phi(),
-                track.sign(),
                 (uint8_t)track.tpcNClsCrossedRows(),
                 (uint8_t)track.tpcNClsFound(),
-                track.dcaXY(),
-                track.dcaZ(),
-                track.hasTOF(),
+                static_cast<int16_t>(track.dcaXY() * 10000),
+                static_cast<int16_t>(track.dcaZ() * 10000),
                 (int8_t)(track.tpcNSigmaPi() * 10),
                 (int8_t)(track.tpcNSigmaKa() * 10),
                 (int8_t)(track.tpcNSigmaPr() * 10),
                 (int8_t)(track.tofNSigmaPi() * 10),
                 (int8_t)(track.tofNSigmaKa() * 10),
                 (int8_t)(track.tofNSigmaPr() * 10),
-                track.tpcSignal(),
-                track.passedITSRefit(),
-                track.passedTPCRefit(),
-                track.isGlobalTrackWoDCA(),
-                track.isGlobalTrack(),
-                track.isPrimaryTrack(),
-                track.isPVContributor());
+                (int8_t)(track.tpcSignal() * 10),
+                trackFlags);
       if constexpr (isMC) {
         fillMCTrack(track);
       }
@@ -653,21 +651,19 @@ struct ResonanceInitializer {
                v0.px(),
                v0.py(),
                v0.pz(),
-               v0.eta(),
-               v0.phi(),
                childIDs,
-               v0.template posTrack_as<TrackType>().tpcNSigmaPi(),
-               v0.template posTrack_as<TrackType>().tpcNSigmaKa(),
-               v0.template posTrack_as<TrackType>().tpcNSigmaPr(),
-               v0.template negTrack_as<TrackType>().tpcNSigmaPi(),
-               v0.template negTrack_as<TrackType>().tpcNSigmaKa(),
-               v0.template negTrack_as<TrackType>().tpcNSigmaPr(),
-               v0.template negTrack_as<TrackType>().tofNSigmaPi(),
-               v0.template negTrack_as<TrackType>().tofNSigmaKa(),
-               v0.template negTrack_as<TrackType>().tofNSigmaPr(),
-               v0.template posTrack_as<TrackType>().tofNSigmaPi(),
-               v0.template posTrack_as<TrackType>().tofNSigmaKa(),
-               v0.template posTrack_as<TrackType>().tofNSigmaPr(),
+               (int8_t)(v0.template posTrack_as<TrackType>().tpcNSigmaPi() * 10),
+               (int8_t)(v0.template posTrack_as<TrackType>().tpcNSigmaKa() * 10),
+               (int8_t)(v0.template posTrack_as<TrackType>().tpcNSigmaPr() * 10),
+               (int8_t)(v0.template negTrack_as<TrackType>().tpcNSigmaPi() * 10),
+               (int8_t)(v0.template negTrack_as<TrackType>().tpcNSigmaKa() * 10),
+               (int8_t)(v0.template negTrack_as<TrackType>().tpcNSigmaPr() * 10),
+               (int8_t)(v0.template negTrack_as<TrackType>().tofNSigmaPi() * 10),
+               (int8_t)(v0.template negTrack_as<TrackType>().tofNSigmaKa() * 10),
+               (int8_t)(v0.template negTrack_as<TrackType>().tofNSigmaPr() * 10),
+               (int8_t)(v0.template posTrack_as<TrackType>().tofNSigmaPi() * 10),
+               (int8_t)(v0.template posTrack_as<TrackType>().tofNSigmaKa() * 10),
+               (int8_t)(v0.template posTrack_as<TrackType>().tofNSigmaPr() * 10),
                v0.v0cosPA(),
                v0.dcaV0daughters(),
                v0.dcapostopv(),
@@ -702,27 +698,25 @@ struct ResonanceInitializer {
                     casc.px(),
                     casc.py(),
                     casc.pz(),
-                    casc.eta(),
-                    casc.phi(),
                     childIDs,
-                    casc.template posTrack_as<TrackType>().tpcNSigmaPi(),
-                    casc.template posTrack_as<TrackType>().tpcNSigmaKa(),
-                    casc.template posTrack_as<TrackType>().tpcNSigmaPr(),
-                    casc.template negTrack_as<TrackType>().tpcNSigmaPi(),
-                    casc.template negTrack_as<TrackType>().tpcNSigmaKa(),
-                    casc.template negTrack_as<TrackType>().tpcNSigmaPr(),
-                    casc.template bachelor_as<TrackType>().tpcNSigmaPi(),
-                    casc.template bachelor_as<TrackType>().tpcNSigmaKa(),
-                    casc.template bachelor_as<TrackType>().tpcNSigmaPr(),
-                    casc.template posTrack_as<TrackType>().tofNSigmaPi(),
-                    casc.template posTrack_as<TrackType>().tofNSigmaKa(),
-                    casc.template posTrack_as<TrackType>().tofNSigmaPr(),
-                    casc.template negTrack_as<TrackType>().tofNSigmaPi(),
-                    casc.template negTrack_as<TrackType>().tofNSigmaKa(),
-                    casc.template negTrack_as<TrackType>().tofNSigmaPr(),
-                    casc.template bachelor_as<TrackType>().tofNSigmaPi(),
-                    casc.template bachelor_as<TrackType>().tofNSigmaKa(),
-                    casc.template bachelor_as<TrackType>().tofNSigmaPr(),
+                    (int8_t)(casc.template posTrack_as<TrackType>().tpcNSigmaPi() * 10),
+                    (int8_t)(casc.template posTrack_as<TrackType>().tpcNSigmaKa() * 10),
+                    (int8_t)(casc.template posTrack_as<TrackType>().tpcNSigmaPr() * 10),
+                    (int8_t)(casc.template negTrack_as<TrackType>().tpcNSigmaPi() * 10),
+                    (int8_t)(casc.template negTrack_as<TrackType>().tpcNSigmaKa() * 10),
+                    (int8_t)(casc.template negTrack_as<TrackType>().tpcNSigmaPr() * 10),
+                    (int8_t)(casc.template bachelor_as<TrackType>().tpcNSigmaPi() * 10),
+                    (int8_t)(casc.template bachelor_as<TrackType>().tpcNSigmaKa() * 10),
+                    (int8_t)(casc.template bachelor_as<TrackType>().tpcNSigmaPr() * 10),
+                    (int8_t)(casc.template posTrack_as<TrackType>().tofNSigmaPi() * 10),
+                    (int8_t)(casc.template posTrack_as<TrackType>().tofNSigmaKa() * 10),
+                    (int8_t)(casc.template posTrack_as<TrackType>().tofNSigmaPr() * 10),
+                    (int8_t)(casc.template negTrack_as<TrackType>().tofNSigmaPi() * 10),
+                    (int8_t)(casc.template negTrack_as<TrackType>().tofNSigmaKa() * 10),
+                    (int8_t)(casc.template negTrack_as<TrackType>().tofNSigmaPr() * 10),
+                    (int8_t)(casc.template bachelor_as<TrackType>().tofNSigmaPi() * 10),
+                    (int8_t)(casc.template bachelor_as<TrackType>().tofNSigmaKa() * 10),
+                    (int8_t)(casc.template bachelor_as<TrackType>().tofNSigmaPr() * 10),
                     casc.v0cosPA(collision.posX(), collision.posY(), collision.posZ()),
                     casc.casccosPA(collision.posX(), collision.posY(), collision.posZ()),
                     casc.dcaV0daughters(),
@@ -1009,8 +1003,6 @@ struct ResonanceInitializer {
                      mcPart.px(),
                      mcPart.py(),
                      mcPart.pz(),
-                     mcPart.eta(),
-                     mcPart.phi(),
                      mcPart.y(),
                      mcPart.e(),
                      mcPart.statusCode());
@@ -1204,7 +1196,9 @@ struct ResonanceInitializer {
       return;
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
 
     fillTracks<false>(collision, tracks);
   }
@@ -1214,13 +1208,15 @@ struct ResonanceInitializer {
                             soa::Filtered<ResoTracks> const& tracks,
                             BCsWithRun2Info const&)
   {
-    auto bc = collision.bc_as<BCsWithRun2Info>();
+    // auto bc = collision.bc_as<BCsWithRun2Info>();
     // Default event selection
     if (!colCuts.isSelected(collision))
       return;
     colCuts.fillQARun2(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
 
     fillTracks<false>(collision, tracks);
   }
@@ -1237,8 +1233,9 @@ struct ResonanceInitializer {
       return;
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), getEvtPl(collision), getEvtPlRes(collision, evtPlDetId, evtPlRefAId), getEvtPlRes(collision, evtPlDetId, evtPlRefBId), getEvtPlRes(collision, evtPlRefAId, evtPlRefBId), dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
-
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), getEvtPl(collision), getEvtPlRes(collision, evtPlDetId, evtPlRefAId), getEvtPlRes(collision, evtPlDetId, evtPlRefBId), getEvtPlRes(collision, evtPlRefAId, evtPlRefBId));
     fillTracks<false>(collision, tracks);
   }
   PROCESS_SWITCH(ResonanceInitializer, processTrackEPData, "Process for data and ep ana", false);
@@ -1255,7 +1252,9 @@ struct ResonanceInitializer {
       return;
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
 
     fillTracks<false>(collision, tracks);
     fillV0s<false>(collision, V0s, tracks);
@@ -1267,13 +1266,15 @@ struct ResonanceInitializer {
                               ResoV0s const& V0s,
                               BCsWithRun2Info const&)
   {
-    auto bc = collision.bc_as<BCsWithRun2Info>();
+    // auto bc = collision.bc_as<BCsWithRun2Info>();
     // Default event selection
     if (!colCuts.isSelected(collision))
       return;
     colCuts.fillQARun2(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
 
     fillTracks<false>(collision, tracks);
     fillV0s<false>(collision, V0s, tracks);
@@ -1293,8 +1294,9 @@ struct ResonanceInitializer {
       return;
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
-
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     fillTracks<false>(collision, tracks);
     fillV0s<false>(collision, V0s, tracks);
     fillCascades<false>(collision, Cascades, tracks);
@@ -1307,13 +1309,15 @@ struct ResonanceInitializer {
                                   ResoCascades const& Cascades,
                                   BCsWithRun2Info const&)
   {
-    auto bc = collision.bc_as<BCsWithRun2Info>();
+    // auto bc = collision.bc_as<BCsWithRun2Info>();
     // Default event selection
     if (!colCuts.isSelected(collision))
       return;
     colCuts.fillQARun2(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
 
     fillTracks<false>(collision, tracks);
     fillV0s<false>(collision, V0s, tracks);
@@ -1330,8 +1334,9 @@ struct ResonanceInitializer {
     initCCDB(bc);
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
-
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     auto mccollision = collision.mcCollision_as<aod::McCollisions>();
     float impactpar = mccollision.impactParameter();
     fillMCCollision<false>(collision, mcParticles, impactpar);
@@ -1353,7 +1358,9 @@ struct ResonanceInitializer {
     initCCDB(bc);
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), getEvtPl(collision), getEvtPlRes(collision, evtPlDetId, evtPlRefAId), getEvtPlRes(collision, evtPlDetId, evtPlRefBId), getEvtPlRes(collision, evtPlRefAId, evtPlRefBId), dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), getEvtPl(collision), getEvtPlRes(collision, evtPlDetId, evtPlRefAId), getEvtPlRes(collision, evtPlDetId, evtPlRefBId), getEvtPlRes(collision, evtPlRefAId, evtPlRefBId));
     fillMCCollision<false>(collision, mcParticles);
 
     // Loop over tracks
@@ -1369,10 +1376,12 @@ struct ResonanceInitializer {
                           aod::McCollisions const&, soa::Filtered<ResoTracksMC> const& tracks,
                           aod::McParticles const& mcParticles, BCsWithRun2Info const&)
   {
-    auto bc = collision.bc_as<BCsWithRun2Info>();
+    // auto bc = collision.bc_as<BCsWithRun2Info>();
     colCuts.fillQARun2(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     fillMCCollision<true>(collision, mcParticles);
 
     // Loop over tracks
@@ -1393,7 +1402,9 @@ struct ResonanceInitializer {
     initCCDB(bc);
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     fillMCCollision<false>(collision, mcParticles);
 
     // Loop over tracks
@@ -1411,10 +1422,12 @@ struct ResonanceInitializer {
                             ResoV0sMC const& V0s,
                             aod::McParticles const& mcParticles, BCsWithRun2Info const&)
   {
-    auto bc = collision.bc_as<BCsWithRun2Info>();
+    // auto bc = collision.bc_as<BCsWithRun2Info>();
     colCuts.fillQARun2(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     fillMCCollision<true>(collision, mcParticles);
 
     // Loop over tracks
@@ -1437,7 +1450,9 @@ struct ResonanceInitializer {
     initCCDB(bc);
     colCuts.fillQA(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), centEst(collision), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     fillMCCollision<false>(collision, mcParticles);
 
     // Loop over tracks
@@ -1457,10 +1472,12 @@ struct ResonanceInitializer {
                                 ResoCascadesMC const& Cascades,
                                 aod::McParticles const& mcParticles, BCsWithRun2Info const&)
   {
-    auto bc = collision.bc_as<BCsWithRun2Info>();
+    // auto bc = collision.bc_as<BCsWithRun2Info>();
     colCuts.fillQARun2(collision);
 
-    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), computeSpherocity(tracks, trackSphMin, trackSphDef), 0., 0., 0., 0., dBz, bc.timestamp(), collision.trackOccupancyInTimeRange());
+    resoCollisions(collision.globalIndex(), 0, collision.posX(), collision.posY(), collision.posZ(), collision.centRun2V0M(), dBz);
+    resoSpheroCollisions(collision.globalIndex(), computeSpherocity(tracks, trackSphMin, trackSphDef));
+    resoEvtPlCollisions(collision.globalIndex(), 0, 0, 0, 0);
     fillMCCollision<true>(collision, mcParticles);
 
     // Loop over tracks
